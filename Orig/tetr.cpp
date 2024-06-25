@@ -10,16 +10,22 @@
 // 9. Поворот фигур. Следствие: Проверка столкновений после поворота Выполнено.
 // 10. Нужно ли проверить точки которые могут выйти за пределы игрвого поля. Выполнено.
 // 11. Сдвиг фигуры после поворота от границы если есть возможность. Выполнено.
+// 12. Отследить конец игры
+// 13. Проверить поворот от границы слева от левой границы и границы справа от правой границы. Выполнено.
 // 14. Сделать сдвиг против часовой стрелки. Выполнено.
+// 15. В iscollision поставить проверку на нижнюю границу по y. Выполено.
+// 16. Перенести код из метода run2 в run. Выполнено.
+// 17. Добавить фигурам цвет. Выполнено.
+// 20. счет в игре. Выполнено.
+// 22. Скрыть курсор. Выполнено.
+
 
 // Задачи в решении
 
 // 6. Перемещение по хедерами и прочее упрощение работы. Не первостепенная задача.
-// 12. Отследить конец игры
-// 13. Проверить поворот от границы слева от левой границы и границы справа от правой границы
-// 15. В iscollision поставить проверку на нижнюю границу по y
-// 16. Код в котором присутствует вложенность должен быть ликвидирован(по возможности дабы оптимизировать код),
-// также код надо оформить в отдельную функцию(по возможности).
+// 18. Добавить счетчик уровней.
+// 19. Переход из уровня в уровень. С увеличением скорости падения фигуры.
+// 21. Добавить разнообразие фигур. 
 
 
 #include <iostream>
@@ -31,7 +37,28 @@
 #include <conio.h>
 #include <vector>
 #include <math.h>
+#include <ctime>
 using namespace std;
+
+enum ConsoleColor
+{
+	BLACK = 0,
+	BLUE = 1,
+	GREEN = 2,
+	CYAN = 3,
+	RED = 4,
+	MAGENTA = 5,
+	BROWN = 6,
+	LIGHT_GRAY = 7,
+	DARKGRAY = 8,
+	LIGHT_BLUE = 9,
+	LIGHT_GREEN = 10,
+	LIGHT_CYAN = 11,
+	LIGHT_RED = 12,
+	LIGHT_MAGENTA = 13,
+	YELLOW = 14,
+	WHITE = 15
+};
 
 const int WIDTH = 10 + 2;
 const int HEIGHT = 15 + 1;
@@ -44,6 +71,13 @@ const int LINE = 10;
 
 const float PI = 3.1415;
 
+const int SLEEP_TIME = 50;
+
+int countTact = 0;
+const int COUNT_TACT_FOR_NOT_MOVE_F = 5;
+
+int score = 0;
+int kind = 3;
 
 void gotoxy(int x, int y)
 {
@@ -51,12 +85,22 @@ void gotoxy(int x, int y)
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
 
+// устанавливает цвет текста и фона в консоли.
+
+void setColor(int background, int text)
+{
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hStdOut, (WORD)(background << 4) | text);
+}
+
+
 struct Point
 {
 	int x;
 	int y;
 };
 
+// ФИГУРА
 vector <Point> vec1;
 vector <Point> bvec;
 
@@ -86,11 +130,25 @@ void Push(int x, int y)
 
 void Show()
 {
+	switch (kind)
+	{
+	case 0:
+		setColor(BLACK, RED);
+		break;
+	case 1:
+		setColor(BLACK, BLUE);
+		break;
+	case 2:
+		setColor(BLACK, GREEN);
+		break;
+	}
+
 	for (int i = 0; i < vec1.size(); i++)
 	{
 		gotoxy(vec1[i].x, vec1[i].y);
-		cout << "*";
+		printSymbolASCII(249);
 	}
+	setColor(BLACK, WHITE);
 }
 
 void Hide()
@@ -145,8 +203,6 @@ void MoveRight()
 //	}
 //	return false;
 //}
-
-
 
 bool isCollision(const vector <vector <int>>& vec2d)
 {
@@ -218,12 +274,25 @@ void Fixed(vector <vector <int>>& vec2d)
 	}
 }
 
+bool allowMove()
+{
+	if (countTact < COUNT_TACT_FOR_NOT_MOVE_F)
+	{
+		countTact++;
+		return false;
+	}
+	countTact = 0;
+	return true;
+
+}
+
 void Spawn()
 {
 	vec1.clear();
+	srand(time(0));
 
-	int r = 0; // rand() % 3;
-	switch (r)
+	kind = rand() % 3;
+	switch (kind)
 	{
 	case 0: // палка
 		Push(4, 0);
@@ -293,6 +362,15 @@ void InitVec(vector <vector <int> > & vec, int width, int height)
 	vec.push_back(temp);
 }
 
+void Hide_Cursor()
+{
+	void* handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_CURSOR_INFO structCursorInfo;
+	GetConsoleCursorInfo(handle, &structCursorInfo);
+	structCursorInfo.bVisible = FALSE;
+	SetConsoleCursorInfo(handle, &structCursorInfo);
+
+}
 //void showField()
 //{
 //	
@@ -327,6 +405,13 @@ void TestInit()
 	}
 }
 
+void gameover()
+{
+	gotoxy(10, 25);
+	cout << "GAME OVER";
+	system("pause");
+}
+
 void showField(const vector <vector <int> >& vec)
 {
 	// Для откладки и проверки целостности 
@@ -346,8 +431,8 @@ void showField(const vector <vector <int> >& vec)
 	for (int i = 0; i < vec.size(); i++)
 	{
 		for (int j = 0; j < vec[i].size(); j++) {
-			if (vec[i][j] == Border) 
-				cout << '#';
+			if (vec[i][j] == Border)
+				printSymbolASCII(178);
 			if (vec[i][j] == Block)
 				cout << '*';
 			else if (vec[i][j] == Empty)
@@ -374,7 +459,7 @@ void AnimateDelLines(const vector <int> &lines)
 	}	
 }
 
-void deletedLines(int width)
+int deletedLines(int width)
 {
 
 	vector <int> lines;
@@ -399,13 +484,14 @@ void deletedLines(int width)
 		}
 	}
 	
-	AnimateDelLines(lines);
 	
 	// Удаление рядов из вектора 
 	for (int i = 0; i < lines.size(); i++)
 	{
 		vec.erase(vec.begin() + lines[i]);
 	}
+
+	
 
 	// Добавление пустых рядов сверху в стакан взамен удаленных
 	vector<int> temp;
@@ -416,20 +502,44 @@ void deletedLines(int width)
 
 	for (int i = 0; i < lines.size(); i++)
 		vec.insert(vec.begin(), temp);
+
+	AnimateDelLines(lines);
+	return lines.size();
+}
+
+void IncScore(int lines)
+{
+	switch (lines)
+	{
+	case 1:
+		score += 1;
+		break;
+	case 2:
+		score += 3;
+		break;
+	case 3:
+		score += 8;
+		break;
+	case 4:
+		score += 15;
+		break;
+	}
+}
+
+void Showscore()
+{
+	gotoxy(30, 20);
+	cout << "Счет: " << score;
 }
 
 int run()
 {
-	
+	Hide_Cursor();
 	InitVec(vec, WIDTH, HEIGHT);
-
 	showField(vec);
+	Showscore();
 
 	Spawn();
-	/*Push(4, 0);
-	Push(5, 0);
-	Push(4, 1);
-	Push(5, 1);*/
 
 
 	int ch = 0;
@@ -442,20 +552,35 @@ int run()
 		while (!_kbhit())
 		{
 			Hide();
-			MoveDown();
+
+			if (allowMove())
+			{
+				MoveDown();
+			}
+
 			if (isCollision(vec))
 			{
 				MoveUp();
 				Fixed(vec);
 
 				Show(); // нужно фигуру прорисовать перед удалением линий 
-				deletedLines(WIDTH);
+				int lines = deletedLines(WIDTH);
+				IncScore(lines);
+				Showscore();
+
 				showField(vec);
 
 				Spawn();
+				// проверка на конец игры
+				if (isCollision(vec))
+				{
+					Show();
+					gameover();
+					return 0;
+				}
 			}
 			Show();
-			Sleep(300);
+			Sleep(SLEEP_TIME);
 		}
 		ch = _getch();
 
@@ -479,24 +604,43 @@ int run()
 		break;// вправо
 
 		case 80:
-			y++;
-		break;// вниз
-
-		case 72:
 			Hide();
-			RotateR();
+			MoveDown();
 			if (isCollision(vec))
 			{
-				RotateL();
+				MoveUp();
+			}
+		break;// вниз
+
+		case 72: // Вверх поворот по часовой стрелке
+			Hide();
+			save();
+
+			RotateR();
+			if (!ShiftLeft(vec))
+			{
+				undo();
+				RotateR();
+				if (!ShiftRight(vec))
+				{
+					undo();
+				}
 			}
 		break;// поворот по часовой
 
 		case 32:
 			Hide();
+			save();
+
 			RotateL();
-			if (isCollision(vec))
+			if (!ShiftLeft(vec))
 			{
-				RotateR();
+				undo();
+				RotateL();
+				if (!ShiftRight(vec))
+				{
+					undo();
+				}
 			}
 			break;// поворот против часовой	
 
@@ -543,8 +687,12 @@ int run2()
 			{
 				MoveUp();
 				Fixed(vec);
+
+
+				Show();
 				deletedLines(WIDTH);
 				showField(vec);
+
 				Spawn();
 			}
 			Show();
@@ -569,7 +717,7 @@ int run2()
 			{
 				MoveLeft();
 			}
-			break;// вправо
+		break;// вправо
 
 		case 80:
 			Hide();
@@ -578,7 +726,7 @@ int run2()
 			{
 				MoveUp();
 			}
-			break;// вниз
+		break;// вниз
 
 		case 72: // Вверх поворот по часовой стрелке
 			Hide();
@@ -594,8 +742,7 @@ int run2()
 					undo();
 				}
 			}
-
-			break;// поворот по часовой
+		break;// поворот по часовой
 
 		case 32:
 			Hide();
@@ -611,7 +758,7 @@ int run2()
 					undo();
 				}
 			}
-			break;// поворот против часовой	
+		break;// поворот против часовой	
 
 		case 75:
 			Hide();
@@ -620,7 +767,7 @@ int run2()
 			{
 				MoveRight();
 			}
-			break;// влево
+		break;// влево
 
 		}
 	}
@@ -635,7 +782,14 @@ int main()
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
-	run2();
+	void* handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_CURSOR_INFO structCursorInfo;
+	GetConsoleCursorInfo(handle, &structCursorInfo);
+	structCursorInfo.bVisible = FALSE;
+	SetConsoleCursorInfo(handle, &structCursorInfo);
+
+
+	run();
 	
 
 
