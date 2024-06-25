@@ -1,14 +1,25 @@
 
+// Сделанные Задачи.
 // 1. Контроль границ стакана. Фигура не должнга выходить из стакана. Выполнено.
 // 2. Фиксация фигуры. Выполнено.
 // 3. Фигура фиксировалась относительно уже установленных фигур. Выполнено.
 // 4. Удаление заполненных рядов. Выполнено.
 // 5. deletelines, оптимизировать код. Сравнивать на неравенство. Выполнено.
-// 6. Рефакторинг кода, перемещение по хедерами и прочее упрощение работы. Не первостепенная задача.
-// 7. Анимация при удалении рядов. 
+// 7. Анимация при удалении рядов. Выполнено.
 // 8. Новые фигуры. Выполнено.
-// 9. Оформление в отдельный метод добавление пустой строки в стакане
-// 10. Поворот фигур. Следствие: Проверка столкновений после поворота
+// 9. Поворот фигур. Следствие: Проверка столкновений после поворота Выполнено.
+// 10. Нужно ли проверить точки которые могут выйти за пределы игрвого поля. Выполнено.
+// 11. Сдвиг фигуры после поворота от границы если есть возможность. Выполнено.
+// 14. Сделать сдвиг против часовой стрелки. Выполнено.
+
+// Задачи в решении
+
+// 6. Перемещение по хедерами и прочее упрощение работы. Не первостепенная задача.
+// 12. Отследить конец игры
+// 13. Проверить поворот от границы слева от левой границы и границы справа от правой границы
+// 15. В iscollision поставить проверку на нижнюю границу по y
+// 16. Код в котором присутствует вложенность должен быть ликвидирован(по возможности дабы оптимизировать код),
+// также код надо оформить в отдельную функцию(по возможности).
 
 
 #include <iostream>
@@ -47,6 +58,8 @@ struct Point
 };
 
 vector <Point> vec1;
+vector <Point> bvec;
+
 int getX(int i)
 {
 	return vec1[i].x;
@@ -121,16 +134,80 @@ void MoveRight()
 	}
 }
 
+//bool isCollision(const vector <vector <int>>& vec2d)
+//{
+//	for (int i = 0; i < getSZ(); i++)
+//	{
+//		if (vec2d[getY(i)][getX(i)] == Border) // столконовение с границей
+//			return true;
+//		if (vec2d[getY(i)][getX(i)] == Block) //  столконовение с уже установленной фигурой
+//			return true;
+//	}
+//	return false;
+//}
+
+
+
 bool isCollision(const vector <vector <int>>& vec2d)
 {
 	for (int i = 0; i < getSZ(); i++)
 	{
+		if (getY(i) < 0) // столкновение с верхней границей
+			return true;
+		if (getX(i) <= 0) // столкновение с левой границей
+			return true;
+		if (getX(i) >= 11) // столкновение с левой границей
+			return true;
 		if (vec2d[getY(i)][getX(i)] == Border) // столконовение с границей
 			return true;
 		if (vec2d[getY(i)][getX(i)] == Block) //  столконовение с уже установленной фигурой
 			return true;
 	}
 	return false;
+}
+
+bool ShiftLeft(vector <vector <int> >& vec)
+{
+	if (isCollision(vec))
+	{
+		MoveLeft();
+		if (isCollision(vec))
+		{
+			MoveLeft();
+			if (isCollision(vec))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+bool ShiftRight(vector <vector <int> >& vec)
+{
+	if (isCollision(vec))
+	{
+		MoveRight();
+		if (isCollision(vec))
+		{
+			MoveRight();
+			if (isCollision(vec))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+void save()
+{
+	bvec = vec1;
+}
+
+void undo()
+{
+	vec1 = bvec;
 }
 
 void Fixed(vector <vector <int>>& vec2d)
@@ -145,20 +222,20 @@ void Spawn()
 {
 	vec1.clear();
 
-	int r = rand() % 3;
+	int r = 0; // rand() % 3;
 	switch (r)
 	{
-	case 0:
-		Push(4, 0);
-		Push(5, 0);
-		Push(4, 1);
-		Push(5, 1);
-		break;
-	case 1:
+	case 0: // палка
 		Push(4, 0);
 		Push(5, 0);
 		Push(6, 0);
 		Push(7, 0);
+		break;
+	case 1:
+		Push(4, 0);
+		Push(5, 0);
+		Push(4, 1);
+		Push(5, 1);
 		break;
 	case 2:
 		Push(4, 0);
@@ -199,7 +276,6 @@ void RotateL()
 vector <vector <int>> vec;
 
 
-
 void InitVec(vector <vector <int> > & vec, int width, int height)
 {
 	vector<int> temp;
@@ -237,7 +313,19 @@ void InitVec(vector <vector <int> > & vec, int width, int height)
 //		printSymbolASCII(179);
 //	}
 //}
-
+void TestInit()
+{
+	for (int i = 3; i < vec.size() - 1; i++)
+	{
+		for (int j = 0; j < vec[i].size(); j++) {
+			if (j == 7)
+				vec[i][j] = Block;
+			if (j == 3)
+				vec[i][j] = Block;
+		}
+		cout << endl;
+	}
+}
 
 void showField(const vector <vector <int> >& vec)
 {
@@ -269,6 +357,23 @@ void showField(const vector <vector <int> >& vec)
 	}
 }
 
+void AnimateDelLines(const vector <int> &lines)
+{
+
+	if (lines.empty())
+		return;
+
+	for (int i = 1; i <= LINE; i++)
+	{
+		for (int j = 0; j < lines.size(); j++)
+		{
+			gotoxy(i, lines[j]);
+			cout << " ";
+		}
+		Sleep(50);
+	}	
+}
+
 void deletedLines(int width)
 {
 
@@ -294,12 +399,12 @@ void deletedLines(int width)
 		}
 	}
 	
+	AnimateDelLines(lines);
 	
 	// Удаление рядов из вектора 
 	for (int i = 0; i < lines.size(); i++)
 	{
 		vec.erase(vec.begin() + lines[i]);
-		//cout << lines[i] << " ";
 	}
 
 	// Добавление пустых рядов сверху в стакан взамен удаленных
@@ -342,12 +447,15 @@ int run()
 			{
 				MoveUp();
 				Fixed(vec);
+
+				Show(); // нужно фигуру прорисовать перед удалением линий 
 				deletedLines(WIDTH);
 				showField(vec);
+
 				Spawn();
 			}
 			Show();
-			Sleep(200);
+			Sleep(300);
 		}
 		ch = _getch();
 
@@ -377,11 +485,19 @@ int run()
 		case 72:
 			Hide();
 			RotateR();
+			if (isCollision(vec))
+			{
+				RotateL();
+			}
 		break;// поворот по часовой
 
 		case 32:
 			Hide();
 			RotateL();
+			if (isCollision(vec))
+			{
+				RotateR();
+			}
 			break;// поворот против часовой	
 
 		case 75:
@@ -399,13 +515,127 @@ int run()
 	return 0;
 }
 
+int run2()
+{
+
+	InitVec(vec, WIDTH, HEIGHT);
+
+	//TestInit();
+
+	showField(vec);
+
+	Spawn();
+	
+
+
+	int ch = 0;
+	int i = 0;
+
+	int x = 5, y = 5;
+
+	while (true)
+	{
+		//while (!_kbhit())
+		{
+			Hide();
+			//MoveDown();
+			if (isCollision(vec))
+			{
+				MoveUp();
+				Fixed(vec);
+				deletedLines(WIDTH);
+				showField(vec);
+				Spawn();
+			}
+			Show();
+			//Sleep(300);
+		}
+		ch = _getch();
+
+		if (ch == 224)
+		{
+			ch = _getch();
+			gotoxy(25, 25);
+			cout << ch;
+		}
+
+		// обработка нажатых клавиш
+		switch (ch)
+		{
+		case 77:
+			Hide();
+			MoveRight();
+			if (isCollision(vec))
+			{
+				MoveLeft();
+			}
+			break;// вправо
+
+		case 80:
+			Hide();
+			MoveDown();
+			if (isCollision(vec))
+			{
+				MoveUp();
+			}
+			break;// вниз
+
+		case 72: // Вверх поворот по часовой стрелке
+			Hide();
+			save();
+
+			RotateR();
+			if (!ShiftLeft(vec))
+			{
+				undo();
+				RotateR();
+				if (!ShiftRight(vec))
+				{
+					undo();
+				}
+			}
+
+			break;// поворот по часовой
+
+		case 32:
+			Hide();
+			save();
+
+			RotateL();
+			if (!ShiftLeft(vec))
+			{ 
+				undo();
+				RotateL();
+				if (!ShiftRight(vec))
+				{
+					undo();
+				}
+			}
+			break;// поворот против часовой	
+
+		case 75:
+			Hide();
+			MoveLeft();
+			if (isCollision(vec))
+			{
+				MoveRight();
+			}
+			break;// влево
+
+		}
+	}
+
+	return 0;
+}
+
+
 int main()
 {
 	//setlocale(LC_ALL, "ru");
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
-	run();
+	run2();
 	
 
 
